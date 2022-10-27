@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <string.h>
 
 char *GAME_BOARD[] = {
 "                   Score:          Lives:",
@@ -63,14 +64,18 @@ pthread_mutex_t playerLock;
 pthread_mutex_t caterpillarLock;
 pthread_mutex_t screenLock;
 pthread_mutex_t runningLock;
+pthread_mutex_t statsLock;
 int pRow = 20;
 int pCol = 40;
 int i = 0;
+int score = 0;
+int lives = 4;
 
 void *playerFunc();
 void *keyboardFunc();
 void *redrawFunc();
 void *caterpillarMainFunc();
+void *indivCaterpillarFunc();
 void *bulletMainFunc();
 void checkThread();
 
@@ -82,6 +87,7 @@ void startThreads()
     pthread_mutex_init(&screenLock, NULL);
     pthread_mutex_init(&runningLock, NULL);
     pthread_mutex_init(&caterpillarLock, NULL);
+    pthread_mutex_init(&statsLock, NULL);
   }
 
   pthread_t threads[NUM_THREADS];
@@ -116,7 +122,7 @@ void startThreads()
   pthread_mutex_destroy(&screenLock);
   pthread_mutex_destroy(&runningLock);
   pthread_mutex_destroy(&caterpillarLock);
-
+  pthread_mutex_destroy(&statsLock);
 }
 
 void *playerFunc()
@@ -126,12 +132,14 @@ void *playerFunc()
     char** tile = PLAYER_BODY[i];
 
     pthread_mutex_lock(&playerLock);
+    pthread_mutex_lock(&screenLock);
     consoleClearImage(pRow, pCol, 2, 1);
     consoleDrawImage(pRow, pCol, tile, 2);
+    pthread_mutex_unlock(&screenLock);
     i++;
     i = i%4;
     pthread_mutex_unlock(&playerLock);
-    sleep(1);
+    sleepTicks(20);
 
   }
   pthread_exit(NULL);
@@ -152,7 +160,9 @@ void *keyboardFunc()
 
       pthread_mutex_lock(&playerLock);
       char** tile = PLAYER_BODY[i];
+      pthread_mutex_lock(&screenLock);
       consoleClearImage(pRow, pCol, 2, 1);
+      pthread_mutex_unlock(&screenLock);
 
       if (c == MOVE_LEFT && pCol > 0) {
         pCol-= 1;
@@ -166,12 +176,16 @@ void *keyboardFunc()
       else if (c == QUIT) {
         pthread_mutex_lock(&runningLock);
         gameRunning = false;
+        pthread_mutex_lock(&screenLock);
         consoleFinish();
         putBanner("Game Finished");
         finalKeypress();
+        pthread_mutex_unlock(&screenLock);
         pthread_mutex_unlock(&runningLock);
       }
+      pthread_mutex_lock(&screenLock);
       consoleDrawImage(pRow, pCol, tile, 2);
+      pthread_mutex_unlock(&screenLock);
       pthread_mutex_unlock(&playerLock);
     }
   }
@@ -183,32 +197,81 @@ void *redrawFunc()
   //printf("Redraw\n");
   while(gameRunning)
   {
+    pthread_mutex_lock(&statsLock);
+    pthread_mutex_lock(&screenLock);
+    putString("000000", 0, 26, 5);
+    putString("4", 0, 42, 1);
+    pthread_mutex_unlock(&statsLock);
     consoleRefresh();
+    pthread_mutex_unlock(&screenLock);
+    //pthread_mutex_lock(&statsLock);
+    sleepTicks(1);
+
   }
   pthread_exit(NULL);
 }
 
 void *caterpillarMainFunc()
 {
+
+  pthread_t caterpillars[1];
+
+  int returnCode = pthread_create(&caterpillars[0], NULL, indivCaterpillarFunc, NULL);
+  checkThread(returnCode, "Caterpillar");
+  while(gameRunning)
+  {
+    pthread_join(caterpillars[0], NULL);
+  }
+  pthread_exit(NULL);
+}
+
+void *indivCaterpillarFunc()
+{
+  char* tilel[4][1] =
+  {{"0~~~~~~~--"},
+  {"o~--~~~~~~"},
+  {"0~~~--~~~~"},
+  {"o~~~~~--~~"}};
+
+  char* tiler[4][1] =
+  {{"~~~~~~~--0"},
+  {"~--~~~~~~o"},
+  {"~~~--~~~~0"},
+  {"~~~~~--~~o"}};
+
   int cRow = 2;
   int cCol = 80;
   int j = 0;
+  int size = strlen(tilel[j][0]);
   while(gameRunning)
   {
-    char** tile = ENEMY_BODY[j];
-
     pthread_mutex_lock(&caterpillarLock);
-    consoleClearImage(cRow, cCol + 32, 1, 1);
-    consoleDrawImage(cRow, cCol, tile, 1);
+    pthread_mutex_lock(&screenLock);
+    if(cRow%2 != 1)
+    {
+      consoleClearImage(cRow, cCol, 1, size + 5);
+      consoleDrawImage(cRow, cCol, tilel[j], 1);
+    }
+    //else
+    //{
+      //consoleClearImage(cRow - size, cCol, 1, size + 1);
+      //consoleDrawImage(cRow - size, cCol, tiler[j], 1);
+    //}
+    pthread_mutex_unlock(&screenLock);
     j++;
-    j = j%6;
-    cCol = (cCol - 1);
+    j = j%4;
+    //if(cCol <= 0)
+    //{
+      //cRow++;
+      //cCol = 40;
+    //}
+    //if(cRow%2 != 1)
+      cCol = (cCol - 1);
+    //else
+      //cCol = (cCol + 1);
     pthread_mutex_unlock(&caterpillarLock);
-    sleep(1);
-
-
+    sleepTicks(15);
   }
-  pthread_exit(NULL);
   pthread_exit(NULL);
 }
 
