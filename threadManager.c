@@ -35,7 +35,7 @@ char *GAME_BOARD[] = {
 "",
 "" };
 
-char* ENEMY_BODY[4][2] =
+char* PLAYER_BODY[4][2] =
 {
   {"|",
    "|"},
@@ -47,8 +47,22 @@ char* ENEMY_BODY[4][2] =
    "\\"}
 };
 
+char* ENEMY_BODY[6][1] =
+{
+  {"o~~~---~~~---~~~---~~~---~~~---"},
+  {"0~~---~~~---~~~---~~~---~~~---~"},
+  {"o~---~~~---~~~---~~~---~~~---~~"},
+  {"0---~~~---~~~---~~~---~~~---~~~"},
+  {"o--~~~---~~~---~~~---~~~---~~~-"},
+  {"0-~~~---~~~---~~~---~~~---~~~--"},
+};
+
+bool gameRunning = true;
+
 pthread_mutex_t playerLock;
+pthread_mutex_t caterpillarLock;
 pthread_mutex_t screenLock;
+pthread_mutex_t runningLock;
 int pRow = 20;
 int pCol = 40;
 int i = 0;
@@ -66,6 +80,8 @@ void startThreads()
   {
     pthread_mutex_init(&playerLock, NULL);
     pthread_mutex_init(&screenLock, NULL);
+    pthread_mutex_init(&runningLock, NULL);
+    pthread_mutex_init(&caterpillarLock, NULL);
   }
 
   pthread_t threads[NUM_THREADS];
@@ -98,22 +114,16 @@ void startThreads()
   }
   pthread_mutex_destroy(&playerLock);
   pthread_mutex_destroy(&screenLock);
+  pthread_mutex_destroy(&runningLock);
+  pthread_mutex_destroy(&caterpillarLock);
 
 }
 
 void *playerFunc()
 {
-  //printf("Player\n");
-  bool firstState = true;
-
-  while(true)
+  while(gameRunning)
   {
-
-    //if(!firstState)
-      //state = PLAYER_STATE_1;
-    //consoleDrawImage(10, 10, state, 2);
-    //sleep(1);
-    char** tile = ENEMY_BODY[i];
+    char** tile = PLAYER_BODY[i];
 
     pthread_mutex_lock(&playerLock);
     consoleClearImage(pRow, pCol, 2, 1);
@@ -121,8 +131,6 @@ void *playerFunc()
     i++;
     i = i%4;
     pthread_mutex_unlock(&playerLock);
-    consoleRefresh();
-    firstState = !firstState;
     sleep(1);
 
   }
@@ -132,7 +140,7 @@ void *playerFunc()
 void *keyboardFunc()
 {
   fd_set set;
-  while(true)
+  while(gameRunning)
   {
     FD_ZERO(&set);
     FD_SET(STDIN_FILENO, &set);
@@ -143,20 +151,25 @@ void *keyboardFunc()
       char c = getchar();
 
       pthread_mutex_lock(&playerLock);
-      char** tile = ENEMY_BODY[i];
+      char** tile = PLAYER_BODY[i];
       consoleClearImage(pRow, pCol, 2, 1);
 
-      if (c == MOVE_LEFT) {
+      if (c == MOVE_LEFT && pCol > 0) {
         pCol-= 1;
-      } else if (c == MOVE_RIGHT) {
+      } else if (c == MOVE_RIGHT && pCol < 79) {
         pCol+= 1;
-      } else if (c == MOVE_DOWN) {
+      } else if (c == MOVE_DOWN && pRow < 22) {
         pRow+= 1;
-      } else if (c == MOVE_UP) {
+      } else if (c == MOVE_UP && pRow > 17) {
         pRow-= 1;
       }
       else if (c == QUIT) {
-        pRow = pRow; //Remove
+        pthread_mutex_lock(&runningLock);
+        gameRunning = false;
+        consoleFinish();
+        putBanner("Game Finished");
+        finalKeypress();
+        pthread_mutex_unlock(&runningLock);
       }
       consoleDrawImage(pRow, pCol, tile, 2);
       pthread_mutex_unlock(&playerLock);
@@ -168,16 +181,34 @@ void *keyboardFunc()
 void *redrawFunc()
 {
   //printf("Redraw\n");
-  while(true)
+  while(gameRunning)
   {
-    //consoleRefresh();
+    consoleRefresh();
   }
   pthread_exit(NULL);
 }
 
 void *caterpillarMainFunc()
 {
-  //printf("Caterpillar\n");
+  int cRow = 2;
+  int cCol = 80;
+  int j = 0;
+  while(gameRunning)
+  {
+    char** tile = ENEMY_BODY[j];
+
+    pthread_mutex_lock(&caterpillarLock);
+    consoleClearImage(cRow, cCol + 32, 1, 1);
+    consoleDrawImage(cRow, cCol, tile, 1);
+    j++;
+    j = j%6;
+    cCol = (cCol - 1);
+    pthread_mutex_unlock(&caterpillarLock);
+    sleep(1);
+
+
+  }
+  pthread_exit(NULL);
   pthread_exit(NULL);
 }
 

@@ -21,10 +21,10 @@ static int MAX_STR_LEN = 256; /* for strlen checking */
 
 /* Local functions */
 
-static bool checkConsoleSize(int reqHeight, int reqWidth) 
+static bool checkConsoleSize(int reqHeight, int reqWidth)
 {
 
-	if ( (reqWidth > COLS) || (reqHeight > LINES) ) 
+	if ( (reqWidth > COLS) || (reqHeight > LINES) )
  	{
     		fprintf(stderr, "\n\n\rSorry, your window is only %ix%i. \n\r%ix%i is required. Sorry.\n\r", COLS, LINES, reqWidth, reqHeight);
     		return (false);
@@ -45,7 +45,7 @@ bool consoleInit(int height, int width, char *image[])  /* assumes image height/
 	CON_HEIGHT = height;  CON_WIDTH = width;
 	status = checkConsoleSize(CON_HEIGHT, CON_WIDTH);
 
-	if (status) 
+	if (status)
 	{
 		consoleDrawImage(0, 0, image, CON_HEIGHT);
 		consoleRefresh();
@@ -54,7 +54,7 @@ bool consoleInit(int height, int width, char *image[])  /* assumes image height/
 	return(status);
 }
 
-void consoleDrawImage(int row, int col, char *image[], int height) 
+void consoleDrawImage(int row, int col, char *image[], int height)
 {
 	int i, length;
 	int newLeft, newRight, newOffset, newLength;
@@ -64,7 +64,7 @@ void consoleDrawImage(int row, int col, char *image[], int height)
 	newLeft  = col < 0 ? 0 : col;
 	newOffset = col < 0 ? -col : 0;
 
-	for (i = 0; i < height; i++) 
+	for (i = 0; i < height; i++)
 	{
 		if (row+i < 0 || row+i >= CON_HEIGHT)
 			continue;
@@ -74,19 +74,20 @@ void consoleDrawImage(int row, int col, char *image[], int height)
 		if (newOffset >= length || newLength <= 0)
 		  continue;
 
-		if (mvaddnstr(row+i, newLeft, image[i]+newOffset, newLength) == ERR)
-			fprintf(stderr, "ERROR drawing to screen"); /* smarter handling is needed */
+			//TODO: Deal with this problem. Don't know what the problem is
+		if (mvaddnstr(row+i, newLeft, image[i]+newOffset, newLength) == ERR);
+			//fprintf(stderr, "ERROR drawing to screen"); /* smarter handling is needed */
 	}
 }
 
-void consoleClearImage(int row, int col, int height, int width) 
+void consoleClearImage(int row, int col, int height, int width)
 {
 	int i, j;
 	if (consoleLock) return;
 
 	if (col+width > CON_WIDTH)
 		width = CON_WIDTH-col;
-	if (col < 0) 
+	if (col < 0)
 	{
 		width += col; /* -= -col */
 		col = 0;
@@ -95,7 +96,7 @@ void consoleClearImage(int row, int col, int height, int width)
 	if (width < 1 || col >= CON_WIDTH) /* nothing to clear */
 		return;
 
-	for (i = 0; i < height; i++) 
+	for (i = 0; i < height; i++)
 	{
 		if (row+i < 0 || row+i >= CON_HEIGHT)
 			continue;
@@ -107,32 +108,32 @@ void consoleClearImage(int row, int col, int height, int width)
 
 void consoleRefresh(void)
 {
-	if (!consoleLock) 
+	if (!consoleLock)
 	{
 	    move(LINES-1, COLS-1);
 	    refresh();
 	}
 }
 
-void consoleFinish(void) 
+void consoleFinish(void)
 {
     endwin();
 }
 
-void putBanner(const char *str) 
+void putBanner(const char *str)
 {
   if (consoleLock) return;
   int len;
 
   len = strnlen(str,MAX_STR_LEN);
-  
+
   move (CON_HEIGHT/2, (CON_WIDTH-len)/2);
   addnstr(str, len);
 
   consoleRefresh();
 }
 
-void putString(char *str, int row, int col, int maxlen) 
+void putString(char *str, int row, int col, int maxlen)
 {
   if (consoleLock) return;
   move(row, col);
@@ -144,8 +145,8 @@ void putString(char *str, int row, int col, int maxlen)
 /* 10000 usec = 10 ms, or 100fps */
 #define TIMESLICE_USEC 10000
 #define TIME_USECS_SIZE 1000000
-#define USEC_TO_NSEC 1000  
-struct timespec getTimeout(int ticks) 
+#define USEC_TO_NSEC 1000
+struct timespec getTimeout(int ticks)
 {
   struct timespec rqtp;
 
@@ -160,7 +161,7 @@ struct timespec getTimeout(int ticks)
   return rqtp;
 }
 
-void sleepTicks(int ticks) 
+void sleepTicks(int ticks)
 {
 
   if (ticks <= 0)
@@ -170,8 +171,8 @@ void sleepTicks(int ticks)
   nanosleep(&rqtp, NULL);
 }
 
-#define FINAL_PAUSE 2 
-void finalKeypress() 
+#define FINAL_PAUSE 2
+void finalKeypress()
 {
 	flushinp();
 	sleepTicks(FINAL_PAUSE);
@@ -179,7 +180,7 @@ void finalKeypress()
 	getch(); /* wait for user to press a character, blocking. */
 }
 
-void disableConsole(int disabled) 
+void disableConsole(int disabled)
 {
 	consoleLock = disabled;
 }
