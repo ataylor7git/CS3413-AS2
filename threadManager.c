@@ -77,6 +77,7 @@ void *redrawFunc();
 void *caterpillarMainFunc();
 void *indivCaterpillarFunc();
 void *bulletMainFunc();
+void *bulletMoveFunc();
 void checkThread();
 
 void startThreads()
@@ -183,6 +184,17 @@ void *keyboardFunc()
         pthread_mutex_unlock(&screenLock);
         pthread_mutex_unlock(&runningLock);
       }
+      else if(c == SHOOT)
+      {
+        pthread_t thread;
+        int* coords = (int*)malloc((3)*sizeof(int));
+        coords[0] = pRow;
+        coords[1] = pCol;
+        coords[2] = 1;
+        int returnCode = pthread_create(&thread, NULL, bulletMoveFunc, (void*)coords);
+        checkThread(returnCode, "Bullet Move");
+        //pthread_join(thread, NULL);
+      }
       pthread_mutex_lock(&screenLock);
       consoleDrawImage(pRow, pCol, tile, 2);
       pthread_mutex_unlock(&screenLock);
@@ -252,26 +264,48 @@ void *indivCaterpillarFunc()
       consoleClearImage(cRow, cCol, 1, size + 5);
       consoleDrawImage(cRow, cCol, tilel[j], 1);
     }
-    //else
-    //{
-      //consoleClearImage(cRow - size, cCol, 1, size + 1);
-      //consoleDrawImage(cRow - size, cCol, tiler[j], 1);
-    //}
     pthread_mutex_unlock(&screenLock);
     j++;
     j = j%4;
-    //if(cCol <= 0)
-    //{
-      //cRow++;
-      //cCol = 40;
-    //}
-    //if(cRow%2 != 1)
-      cCol = (cCol - 1);
-    //else
-      //cCol = (cCol + 1);
+    cCol = (cCol - 1);
     pthread_mutex_unlock(&caterpillarLock);
     sleepTicks(15);
   }
+  pthread_exit(NULL);
+}
+
+void *bulletMoveFunc(void* coords)
+{
+  int* coordinates = (int*) coords;
+  char* bTile[1] =
+  {"|"};
+  int i = coordinates[0];
+  bool continueMoving = true;
+  while(continueMoving && gameRunning)
+  {
+    if(coordinates[2] == 1)
+    {
+      i--;
+      continueMoving = i > 1;
+    }
+    else
+    {
+      i++;
+      continueMoving = i < 24;
+    }
+
+    pthread_mutex_lock(&screenLock);
+
+    consoleClearImage(i, coordinates[1], 2, 1);
+    consoleDrawImage(i, coordinates[1], bTile, 1);
+
+    pthread_mutex_unlock(&screenLock);
+    sleepTicks(15);
+  }
+  pthread_mutex_lock(&screenLock);
+  consoleClearImage(i + 1, coordinates[1], 1, 1);
+  pthread_mutex_unlock(&screenLock);
+  free(coords);
   pthread_exit(NULL);
 }
 
