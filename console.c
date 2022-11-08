@@ -74,7 +74,7 @@ void consoleDrawImage(int row, int col, char *image[], int height)
 		if (newOffset >= length || newLength <= 0)
 		  continue;
 
-			//TODO: Deal with this problem. Don't know what the problem is
+			//Needed to disable the print statement. Unsure why it throws error.
 		if (mvaddnstr(row+i, newLeft, image[i]+newOffset, newLength) == ERR);
 			//fprintf(stderr, "ERROR drawing to screen"); /* smarter handling is needed */
 	}
